@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>Meu Dinheiro</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f3f4f6;color:#111827}
+header{background:#111827;color:white;padding:22px 18px 18px;border-radius:0 0 24px 24px}
+h1{margin:0 0 4px;font-size:25px}header p{margin:0;color:#cbd5e1;font-size:14px}
+.container{max-width:650px;margin:auto;padding:14px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:-4px}
+.card{background:white;border-radius:16px;padding:15px;box-shadow:0 2px 10px #0000000d}.card small{color:#64748b}.value{font-size:22px;font-weight:750;margin-top:5px}
+.balance{grid-column:1/-1;background:#0f766e;color:white}.balance small{color:#ccfbf1}
+section{background:white;border-radius:18px;padding:16px;margin-top:14px;box-shadow:0 2px 10px #0000000d}
+h2{font-size:18px;margin:0 0 12px}
+input,select,button{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:11px;font-size:15px;margin-bottom:9px;background:white}
+button{background:#111827;color:white;border:0;font-weight:650;cursor:pointer}.secondary{background:#e5e7eb;color:#111827}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.list{margin-top:8px}
+.item{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid #e5e7eb}
+.item:last-child{border-bottom:0}.item b{display:block}.item small{color:#64748b}
+.minus{color:#dc2626}.plus{color:#059669}.due{color:#d97706}
+.empty{color:#64748b;text-align:center;padding:8px}
+.actions{display:flex;gap:8px}.actions button{margin:0}.delete{width:auto;padding:7px 9px;background:#fee2e2;color:#991b1b}
+.progress{height:10px;background:#e5e7eb;border-radius:10px;overflow:hidden;margin-top:8px}.bar{height:100%;background:#0f766e}
+footer{text-align:center;color:#64748b;font-size:12px;padding:20px}
+</style>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#111827">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+</head>
+<body>
+<header><h1>💰 Meu Dinheiro</h1><p>Seu controle financeiro simples</p></header>
+<div class="container">
+<div class="cards">
+<div class="card balance"><small>💵 Saldo disponível</small><div class="value" id="saldo">R$ 0,00</div></div>
+<div class="card"><small>Entradas no mês</small><div class="value plus" id="entradas">R$ 0,00</div></div>
+<div class="card"><small>Gastos no mês</small><div class="value minus" id="gastos">R$ 0,00</div></div>
+</div>
+
+<section>
+<h2>➕ Registrar dinheiro</h2>
+<div class="row"><select id="tipoEntrada"><option value="salario">Salário</option><option value="gorjeta">Gorjeta</option><option value="outro">Outro</option></select><input id="valorEntrada" type="number" step="0.01" placeholder="R$ valor"></div>
+<input id="descEntrada" placeholder="Descrição (opcional)">
+<button onclick="addEntrada()">Adicionar entrada</button>
+</section>
+
+<section>
+<h2>🛒 Registrar compra/gasto</h2>
+<div class="row"><input id="valorGasto" type="number" step="0.01" placeholder="R$ valor"><input id="descGasto" placeholder="O que comprou?"></div>
+<select id="catGasto"><option>Compras</option><option>Comida</option><option>Transporte</option><option>Celular/Internet</option><option>Jogos</option><option>Ferramentas</option><option>Outros</option></select>
+<button onclick="addGasto()">Adicionar gasto</button>
+</section>
+
+<section>
+<h2>📅 Contas que tenho para pagar</h2>
+<div class="row"><input id="valorConta" type="number" step="0.01" placeholder="R$ valor"><input id="descConta" placeholder="Nome da conta"></div>
+<input id="vencConta" type="date">
+<button onclick="addConta()">Adicionar conta</button>
+<div id="contas" class="list"></div>
+</section>
+
+<section>
+<h2>📊 Resumo</h2>
+<div id="resumo"></div>
+</section>
+
+<section>
+<h2>🧾 Histórico do mês</h2>
+<div id="historico" class="list"></div>
+<button class="secondary" onclick="limparTudo()">Apagar todos os dados</button>
+</section>
+<footer>Os dados ficam salvos neste aparelho. Não precisa de conta.</footer>
+</div>
+
+<script>
+const KEY="meu_dinheiro_v1";
+let db=JSON.parse(localStorage.getItem(KEY)||'{"entradas":[],"gastos":[],"contas":[]}');
+const money=v=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v||0);
+const save=()=>{localStorage.setItem(KEY,JSON.stringify(db));render()};
+const monthNow=()=>new Date().toISOString().slice(0,7);
+function addEntrada(){let v=+valorEntrada.value;if(!v)return alert("Digite o valor.");db.entradas.push({id:Date.now(),tipo:tipoEntrada.value,valor:v,desc:descEntrada.value||tipoEntrada.options[tipoEntrada.selectedIndex].text,date:new Date().toISOString()});valorEntrada.value="";descEntrada.value="";save()}
+function addGasto(){let v=+valorGasto.value;if(!v||!descGasto.value)return alert("Digite o valor e o que comprou.");db.gastos.push({id:Date.now(),valor:v,desc:descGasto.value,cat:catGasto.value,date:new Date().toISOString()});valorGasto.value="";descGasto.value="";save()}
+function addConta(){let v=+valorConta.value;if(!v||!descConta.value||!vencConta.value)return alert("Preencha valor, nome e vencimento.");db.contas.push({id:Date.now(),valor:v,desc:descConta.value,venc:vencConta.value,paga:false});valorConta.value="";descConta.value="";vencConta.value="";save()}
+function del(type,id){db[type]=db[type].filter(x=>x.id!==id);save()}
+function pagar(id){let c=db.contas.find(x=>x.id===id);if(c&&!c.paga){c.paga=true;db.gastos.push({id:Date.now(),valor:c.valor,desc:c.desc,cat:"Conta",date:new Date().toISOString()})}save()}
+function render(){
+ let m=monthNow(), ent=db.entradas.filter(x=>x.date.slice(0,7)===m).reduce((a,x)=>a+x.valor,0), gas=db.gastos.filter(x=>x.date.slice(0,7)===m).reduce((a,x)=>a+x.valor,0);
+ let pend=db.contas.filter(x=>!x.paga).reduce((a,x)=>a+x.valor,0), saldo=ent-gas-pend;
+ entradas.textContent=money(ent);gastos.textContent=money(gas);document.getElementById("saldo").textContent=money(saldo);
+ let cats={};db.gastos.filter(x=>x.date.slice(0,7)===m).forEach(x=>cats[x.cat]=(cats[x.cat]||0)+x.valor);
+ let top=Object.entries(cats).sort((a,b)=>b[1]-a[1]);resumo.innerHTML=`<p><b>Você ainda pode gastar:</b> ${money(saldo)}</p><p>Contas pendentes: <b>${money(pend)}</b></p>`+(top.length?top.map(([k,v])=>`<div><small>${k}: ${money(v)}</small><div class="progress"><div class="bar" style="width:${Math.min(100,(v/(ent||1))*100)}%"></div></div></div>`).join(""):"<div class='empty'>Nenhum gasto registrado ainda.</div>");
+ contas.innerHTML=db.contas.length?db.contas.slice().sort((a,b)=>a.venc.localeCompare(b.venc)).map(c=>`<div class="item"><div><b>${c.desc} ${c.paga?"✅":"⏳"}</b><small>Vence: ${new Date(c.venc+"T12:00").toLocaleDateString("pt-BR")}</small></div><div><b>${money(c.valor)}</b><br>${!c.paga?`<button style="width:auto;padding:6px 8px;margin:3px 0" onclick="pagar(${c.id})">Pagar</button>`:""} <button class="delete" onclick="del('contas',${c.id})">×</button></div></div>`).join(""):"<div class='empty'>Nenhuma conta cadastrada.</div>";
+ let hist=[...db.entradas.map(x=>({...x,kind:"entrada"})),...db.gastos.map(x=>({...x,kind:"gasto"}))].filter(x=>x.date.slice(0,7)===m).sort((a,b)=>b.id-a.id);
+ historico.innerHTML=hist.length?hist.map(x=>`<div class="item"><div><b>${x.desc}</b><small>${x.kind==="entrada"?"Entrada":"Gasto"}${x.cat?" · "+x.cat:""}</small></div><div><b class="${x.kind==="entrada"?"plus":"minus"}">${x.kind==="entrada"?"+":"−"} ${money(x.valor)}</b><br><button class="delete" onclick="del('${x.kind==="entrada"?"entradas":"gastos"}',${x.id})">×</button></div></div>`).join(""):"<div class='empty'>Nenhum lançamento neste mês.</div>";
+}
+function limparTudo(){if(confirm("Apagar todos os lançamentos e contas?")){db={entradas:[],gastos:[],contas:[]};save()}}
+render();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
+}
+</script>
+</body>
+</html>
